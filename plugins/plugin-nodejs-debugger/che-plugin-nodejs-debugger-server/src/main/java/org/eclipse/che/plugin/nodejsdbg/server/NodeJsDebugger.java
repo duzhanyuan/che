@@ -37,6 +37,7 @@ import org.eclipse.che.plugin.nodejsdbg.server.exception.NodeJsDebuggerException
 import org.eclipse.che.plugin.nodejsdbg.server.exception.NodeJsDebuggerTerminatedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.eclipse.che.api.vfs.Path;
 
 import java.net.URI;
 import java.util.Collections;
@@ -115,7 +116,7 @@ public class NodeJsDebugger implements Debugger {
             Location location = breakpoint.getLocation();
             pendingBreakpoints.add(location);
             library.setBreakpoint(location.getTarget(), location.getLineNumber());
-            checkActivatedBreakpoints();
+            debuggerCallback.onEvent(new BreakpointActivatedEventImpl(breakpoint));
         } catch (NodeJsDebuggerTerminatedException e) {
             disconnect();
             throw e;
@@ -174,6 +175,7 @@ public class NodeJsDebugger implements Debugger {
             for (Breakpoint breakpoint : action.getBreakpoints()) {
                 Location location = breakpoint.getLocation();
                 library.setBreakpoint(location.getTarget(), location.getLineNumber());
+                debuggerCallback.onEvent(new BreakpointActivatedEventImpl(breakpoint));
                 pendingBreakpoints.add(location);
             }
 
@@ -295,7 +297,7 @@ public class NodeJsDebugger implements Debugger {
             for (Location pending : pendingBreakpoints) {
                 Location added = breakpoint.getLocation();
                 if (added.getLineNumber() == pending.getLineNumber() &&
-                    Pattern.compile(added.getTarget()).matcher(pending.getTarget()).matches()) {
+                    Pattern.compile(added.getTarget()).matcher(Path.of(pending.getTarget()).getName()).matches()) {
 
                     BreakpointImpl brkToSend = new BreakpointImpl(pending, breakpoint.isEnabled(), breakpoint.getCondition());
                     debuggerCallback.onEvent(new BreakpointActivatedEventImpl(brkToSend));
